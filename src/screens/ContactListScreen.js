@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db, auth } from '../services/firebase';
 import { Feather } from '@expo/vector-icons';
 
 export default function ContactListScreen({ navigation }) {
@@ -15,13 +15,28 @@ export default function ContactListScreen({ navigation }) {
     setLoading(true);
     setError(false);
     try {
-      const querySnapshot = await getDocs(collection(db, 'contatos'));
+      const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
+
+      if (!currentUserId) {
+        setContacts([]);
+        setFilteredContacts([]);
+        setLoading(false);
+        return;
+      }
+
+      const q = query(collection(db, 'contatos'), where('userId', '==', currentUserId));
+      const querySnapshot = await getDocs(q);
       const contactList = querySnapshot.docs.map(docSnap => ({
         id: docSnap.id,
         ...docSnap.data()
       }));
+
       setContacts(contactList);
-      setFilteredContacts(contactList);
+      setFilteredContacts(
+        search.trim()
+          ? contactList.filter(c => c.nome?.toLowerCase().includes(search.toLowerCase()))
+          : contactList
+      );
     } catch (err) {
       console.error('Erro ao carregar contatos do Firestore:', err);
       setError(true);

@@ -63,6 +63,14 @@ export default function ContactFormScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.headerBar}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={22} color="#0F172A" />
+        </TouchableOpacity>
+        <Text style={styles.screenTitle}>{contactToEdit ? 'Editar Contato' : 'Novo Contato'}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <View style={styles.avatarPlaceholder}>
         <Feather name="camera" size={24} color="#64748B" />
       </View>
@@ -116,6 +124,9 @@ export default function ContactFormScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   content: { padding: 20 },
+  headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 16 },
+  backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  screenTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
   avatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 24 },
   fieldGroup: { marginBottom: 16 },
   label: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 6 },
