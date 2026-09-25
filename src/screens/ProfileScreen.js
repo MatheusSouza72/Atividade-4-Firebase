@@ -1,18 +1,27 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 export default function ProfileScreen({ navigation }) {
   const user = auth.currentUser;
 
+  const notify = (title, message) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigation.replace('Login');
+      router.replace('/');
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível encerrar a sessão.');
+      notify('Erro', 'Não foi possível encerrar a sessão.');
     }
   };
 
@@ -30,13 +39,19 @@ export default function ProfileScreen({ navigation }) {
       </View>
 
       <View style={styles.menuGroup}>
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => notify('Meus Dados', `Usuário logado: ${user?.email || 'Desconhecido'}`)}
+        >
           <Feather name="user" size={18} color="#64748B" />
           <Text style={styles.menuText}>Meus dados</Text>
           <Feather name="chevron-right" size={18} color="#CBD5E1" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => notify('Ajuda', 'Para suporte ou dúvidas, entre em contato com o suporte do sistema.')}
+        >
           <Feather name="help-circle" size={18} color="#64748B" />
           <Text style={styles.menuText}>Ajuda</Text>
           <Feather name="chevron-right" size={18} color="#CBD5E1" />
