@@ -1,20 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, ActivityIndicator, Modal } from 'react-native';
-import api from '../services/api';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { Feather } from '@expo/vector-icons';
 
 export default function ContactDetailScreen({ route, navigation }) {
-  const { id } = route.params;
-  const [contact, setContact] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const contactParam = route.params?.contact;
+  const id = route.params?.id || contactParam?.id;
+
+  const [contact, setContact] = useState(contactParam || null);
+  const [loading, setLoading] = useState(!contactParam && !!id);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const fetchContact = async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await api.get(`/contatos/${id}`);
-      setContact(response.data);
+      const docRef = doc(db, 'contatos', id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setContact({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        Alert.alert('Erro', 'Contato não encontrado.');
+        navigation.goBack();
+      }
     } catch (error) {
+      console.error('Erro ao carregar contato:', error);
       Alert.alert('Erro', 'Não foi possível carregar os detalhes.');
       navigation.goBack();
     } finally {
@@ -23,17 +37,21 @@ export default function ContactDetailScreen({ route, navigation }) {
   };
 
   useEffect(() => {
-    fetchContact();
+    if (!contactParam && id) {
+      fetchContact();
+    }
   }, [id]);
 
   const confirmDelete = async () => {
+    if (!id) return;
     setDeleting(true);
     try {
-      await api.delete(`/contatos/${id}`);
+      await deleteDoc(doc(db, 'contatos', id));
       setShowDeleteModal(false);
       Alert.alert('Sucesso', 'Contato excluído com sucesso.');
-      navigation.navigate('ContactList');
+      navigation.goBack();
     } catch (error) {
+      console.error('Erro ao excluir contato:', error);
       Alert.alert('Erro', 'Não foi possível excluir o contato.');
     } finally {
       setDeleting(false);
@@ -59,6 +77,10 @@ export default function ContactDetailScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.backIconButton} onPress={() => navigation.goBack()}>
+        <Feather name="arrow-left" size={22} color="#0F172A" />
+      </TouchableOpacity>
+
       <View style={styles.profileHeader}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{getInitials(contact.nome)}</Text>
@@ -129,6 +151,7 @@ export default function ContactDetailScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC', padding: 20 },
+  backIconButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', marginTop: 30 },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   profileHeader: { alignItems: 'center', marginVertical: 20 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#2563EB', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },

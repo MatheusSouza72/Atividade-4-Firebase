@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
-import api from '../services/api';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { Feather } from '@expo/vector-icons';
 
 export default function ContactListScreen({ navigation }) {
@@ -14,10 +15,15 @@ export default function ContactListScreen({ navigation }) {
     setLoading(true);
     setError(false);
     try {
-      const response = await api.get('/contatos');
-      setContacts(response.data);
-      setFilteredContacts(response.data);
+      const querySnapshot = await getDocs(collection(db, 'contatos'));
+      const contactList = querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      setContacts(contactList);
+      setFilteredContacts(contactList);
     } catch (err) {
+      console.error('Erro ao carregar contatos do Firestore:', err);
       setError(true);
     } finally {
       setLoading(false);
@@ -36,7 +42,7 @@ export default function ContactListScreen({ navigation }) {
       return;
     }
     const filtered = contacts.filter((c) =>
-      c.nome.toLowerCase().includes(text.toLowerCase())
+      c.nome?.toLowerCase().includes(text.toLowerCase())
     );
     setFilteredContacts(filtered);
   };
@@ -99,7 +105,7 @@ export default function ContactListScreen({ navigation }) {
             <TouchableOpacity
               style={styles.card}
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('ContactDetail', { id: item.id })}
+              onPress={() => navigation.navigate('ContactDetail', { contact: item, id: item.id })}
             >
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{getInitials(item.nome)}</Text>

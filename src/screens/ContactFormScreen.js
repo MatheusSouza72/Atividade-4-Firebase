@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import api from '../services/api';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../services/firebase'; // Caminho corrigido
 import { Feather } from '@expo/vector-icons';
 
 export default function ContactFormScreen({ route, navigation }) {
@@ -12,26 +13,49 @@ export default function ContactFormScreen({ route, navigation }) {
   const [anotacao, setAnotacao] = useState(contactToEdit?.anotacao || '');
   const [saving, setSaving] = useState(false);
 
+  const notify = (title, message) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleSave = async () => {
     if (!nome.trim() || !telefone.trim() || !cidade.trim()) {
-      Alert.alert('Atenção', 'Nome, Telefone e Cidade são campos obrigatórios.');
+      notify('Atenção', 'Nome, Telefone e Cidade são campos obrigatórios.');
       return;
     }
 
-    const payload = { nome, telefone, cidade, anotacao };
+    const payload = { 
+      nome: nome.trim(), 
+      telefone: telefone.trim(), 
+      cidade: cidade.trim(), 
+      anotacao: anotacao.trim(),
+      userId: auth.currentUser ? auth.currentUser.uid : null,
+      updatedAt: serverTimestamp()
+    };
+    
     setSaving(true);
 
     try {
-      if (contactToEdit) {
-        await api.put(`/contatos/${contactToEdit.id}`, payload);
-        Alert.alert('Sucesso', 'Contato atualizado com sucesso!');
+      if (contactToEdit?.id) {
+        // Atualiza contato existente no Firestore
+        const contactRef = doc(db, 'contatos', contactToEdit.id);
+        await updateDoc(contactRef, payload);
+        notify('Sucesso', 'Contato atualizado com sucesso!');
       } else {
-        await api.post('/contatos', payload);
-        Alert.alert('Sucesso', 'Contato adicionado com sucesso!');
+        // Cria novo contato no Firestore
+        await addDoc(collection(db, 'contatos'), {
+          ...payload,
+          createdAt: serverTimestamp()
+        });
+        notify('Sucesso', 'Contato adicionado com sucesso!');
       }
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Erro na API', 'Não foi possível salvar o contato no servidor.');
+      console.error('Erro no Firestore:', error);
+      notify('Erro', 'Não foi possível salvar o contato no banco de dados.');
     } finally {
       setSaving(false);
     }
